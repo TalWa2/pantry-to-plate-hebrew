@@ -1,6 +1,6 @@
 // Pure, browser-safe recipe rules shared by the server function, the page and tests.
 
-export type TimeRangeId = "upTo30" | "upTo60" | "upTo90";
+export type TimeRangeId = "upTo30" | "from31To60" | "from61To90";
 
 export interface Recipe {
   name: string;
@@ -19,10 +19,10 @@ export interface RecipeGroup {
 export const MAX_PER_GROUP = 3;
 export const MAX_MINUTES = 90;
 
-export const TIME_RANGES: { id: TimeRangeId; title: string; max: number }[] = [
-  { id: "upTo30", title: "עד 30 דקות", max: 30 },
-  { id: "upTo60", title: "עד 60 דקות", max: 60 },
-  { id: "upTo90", title: "עד 90 דקות", max: 90 },
+export const TIME_RANGES: { id: TimeRangeId; title: string; min: number; max: number }[] = [
+  { id: "upTo30", title: "עד 30 דקות", min: 1, max: 30 },
+  { id: "from31To60", title: "בין 31 ל-60 דקות", min: 31, max: 60 },
+  { id: "from61To90", title: "בין 61 ל-90 דקות", min: 61, max: 90 },
 ];
 
 const DEFAULT_NOTE = "לא מצאנו מספיק מנות שמתאימות לזמן הזה רק עם המצרכים שהזנת.";
@@ -30,8 +30,8 @@ const DEFAULT_NOTE = "לא מצאנו מספיק מנות שמתאימות לז�
 /** Digits shown on the kitchen-timer illustration that heads each time range. */
 export const RANGE_TIMER_TEXT: Record<TimeRangeId, string> = {
   upTo30: "30:00",
-  upTo60: "60:00",
-  upTo90: "90:00",
+  from31To60: "60:00",
+  from61To90: "90:00",
 };
 
 /** Splits the free-text field by commas (Latin or Arabic) and line breaks, trimming and de-duplicating. */
@@ -53,19 +53,18 @@ export function normalize(value: string): string {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-/** Returns every time range whose inclusive upper limit covers the given total time. */
-export function eligibleRanges(minutes: number): TimeRangeId[] {
-  if (!Number.isFinite(minutes)) return [];
+/** Returns the single time range a total time belongs to, or null when it is outside 1–90 minutes. */
+export function rangeForMinutes(minutes: number): TimeRangeId | null {
+  if (!Number.isFinite(minutes)) return null;
   const m = Math.round(minutes);
-  if (m < 1) return [];
-  return TIME_RANGES.filter((r) => m <= r.max).map((r) => r.id);
+  const range = TIME_RANGES.find((r) => m >= r.min && m <= r.max);
+  return range ? range.id : null;
 }
 
 /**
  * Applies the app's rules to raw suggestions: keeps only the user's ingredients,
- * drops recipes over 90 minutes, places each recipe in every range whose inclusive
- * upper limit covers its total time (a 25-minute dish can appear in all three),
- * caps each range at three different dishes, and explains short ranges.
+ * drops duplicate dishes and recipes over 90 minutes, places each recipe in exactly
+ * one range by total time, caps each range at three, and explains short ranges.
  */
 export function groupRecipes(
   raw: Recipe[],
@@ -73,20 +72,16 @@ export function groupRecipes(
   notes: Partial<Record<TimeRangeId, string>> = {},
 ): RecipeGroup[] {
   const allowed = new Map(userIngredients.map((i) => [normalize(i), i]));
-  const seenNames: Record<TimeRangeId, Set<string>> = {
-    upTo30: new Set(),
-    upTo60: new Set(),
-    upTo90: new Set(),
-  };
-  const buckets: Record<TimeRangeId, Recipe[]> = { upTo30: [], upTo60: [], upTo90: [] };
+  const seenNames = new Set<string>();
+  const buckets: Record<TimeRangeId, Recipe[]> = { upTo30: [], from31To60: [], from61To90: [] };
 
   for (const r of raw) {
     const name = r.name.trim();
     const nameKey = normalize(name);
-    if (!name) continue;
+    if (!name || seenNames.has(nameKey)) continue;
 
-    const ranges = eligibleRanges(r.totalMinutes);
-    if (ranges.length === 0) continue;
+    const range = rangeForMinutes(r.totalMinutes);
+    if (!range) continue;
 
     const ingredients: string[] = [];
     let usesOutsideItem = false;
@@ -103,12 +98,11 @@ export function groupRecipes(
     const steps = r.steps.map((s) => s.trim()).filter(Boolean);
     if (steps.length === 0) continue;
 
-    for (const range of ranges) {
-      const bucket = buckets[range];
-      if (bucket.length >= MAX_PER_GROUP || seenNames[range].has(nameKey)) continue;
-      seenNames[range].add(nameKey);
-      bucket.push({ name, totalMinutes: Math.round(r.totalMinutes), ingredients, steps });
-    }
+    const bucket = buckets[range];
+    if (bucket.length >= MAX_PER_GROUP) continue;
+
+    seenNames.add(nameKey);
+    bucket.push({ name, totalMinutes: Math.round(r.totalMinutes), ingredients, steps });
   }
 
   return TIME_RANGES.map((range) => {
