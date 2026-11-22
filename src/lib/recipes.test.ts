@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { groupRecipes, parseIngredients, RANGE_TIMER_TEXT, rangeForMinutes, type Recipe } from "./recipes";
+import { eligibleRanges, groupRecipes, parseIngredients, RANGE_TIMER_TEXT, type Recipe } from "./recipes";
 
 const r = (name: string, totalMinutes: number, ingredients = ["ביצים"]): Recipe => ({
   name,
@@ -24,17 +24,19 @@ describe("parseIngredients", () => {
 });
 
 describe("time ranges", () => {
-  it("puts 30 minutes in the first range and 31 in the second", () => {
-    expect(rangeForMinutes(30)).toBe("upTo30");
-    expect(rangeForMinutes(31)).toBe("from31To60");
+  it("makes a 25-minute recipe eligible for all three groups", () => {
+    expect(eligibleRanges(25)).toEqual(["upTo30", "upTo60", "upTo90"]);
   });
-  it("puts 60 in the second range, 61 and 90 in the third", () => {
-    expect(rangeForMinutes(60)).toBe("from31To60");
-    expect(rangeForMinutes(61)).toBe("from61To90");
-    expect(rangeForMinutes(90)).toBe("from61To90");
+  it("makes a 45-minute recipe eligible for the 60 and 90 groups only", () => {
+    expect(eligibleRanges(45)).toEqual(["upTo60", "upTo90"]);
+  });
+  it("includes the upper limit itself", () => {
+    expect(eligibleRanges(30)).toEqual(["upTo30", "upTo60", "upTo90"]);
+    expect(eligibleRanges(60)).toEqual(["upTo60", "upTo90"]);
+    expect(eligibleRanges(90)).toEqual(["upTo90"]);
   });
   it("rejects anything over 90 minutes", () => {
-    expect(rangeForMinutes(91)).toBeNull();
+    expect(eligibleRanges(91)).toEqual([]);
   });
 });
 
@@ -42,11 +44,11 @@ describe("timer headings", () => {
   it("shows 30:00 for the up-to-30 range", () => {
     expect(RANGE_TIMER_TEXT.upTo30).toBe("30:00");
   });
-  it("shows 60:00 for the 31–60 range", () => {
-    expect(RANGE_TIMER_TEXT.from31To60).toBe("60:00");
+  it("shows 60:00 for the up-to-60 range", () => {
+    expect(RANGE_TIMER_TEXT.upTo60).toBe("60:00");
   });
-  it("shows 90:00 for the 61–90 range", () => {
-    expect(RANGE_TIMER_TEXT.from61To90).toBe("90:00");
+  it("shows 90:00 for the up-to-90 range", () => {
+    expect(RANGE_TIMER_TEXT.upTo90).toBe("90:00");
   });
 });
 
@@ -63,10 +65,16 @@ describe("groupRecipes", () => {
     expect(groups[0]?.recipes).toHaveLength(0);
   });
 
-  it("drops duplicate dishes", () => {
+  it("places one dish in every group its time allows", () => {
+    const groups = groupRecipes([r("חביתה", 25)], list);
+    expect(groups.map((g) => g.recipes.length)).toEqual([1, 1, 1]);
+  });
+
+  it("drops duplicate dishes within a group", () => {
     const groups = groupRecipes([r("חביתה", 10), r("חביתה", 40)], list);
-    const total = groups.reduce((n, g) => n + g.recipes.length, 0);
-    expect(total).toBe(1);
+    for (const g of groups) {
+      expect(g.recipes.map((x) => x.name)).toEqual(["חביתה"]);
+    }
   });
 
   it("explains a range with fewer than three meals", () => {

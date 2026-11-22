@@ -30,8 +30,8 @@ export const Route = createFileRoute("/")({
 
 const RANGE_STYLE: Record<TimeRangeId, { badge: string; glow: string }> = {
   upTo30: { badge: "bg-herb-soft text-accent-foreground", glow: "text-primary" },
-  from31To60: { badge: "bg-saffron-soft text-foreground", glow: "text-saffron" },
-  from61To90: { badge: "bg-tomato-soft text-foreground", glow: "text-tomato" },
+  upTo60: { badge: "bg-saffron-soft text-foreground", glow: "text-saffron" },
+  upTo90: { badge: "bg-tomato-soft text-foreground", glow: "text-tomato" },
 };
 
 function Index() {
