@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { groupRecipes, parseIngredients, rangeForMinutes, type Recipe } from "./recipes";
+import { groupRecipes, parseIngredients, RANGE_TIMER_TEXT, rangeForMinutes, type Recipe } from "./recipes";
 
 const r = (name: string, totalMinutes: number, ingredients = ["ביצים"]): Recipe => ({
   name,
@@ -35,6 +35,18 @@ describe("time ranges", () => {
   });
   it("rejects anything over 90 minutes", () => {
     expect(rangeForMinutes(91)).toBeNull();
+  });
+});
+
+describe("timer headings", () => {
+  it("shows 30:00 for the up-to-30 range", () => {
+    expect(RANGE_TIMER_TEXT.upTo30).toBe("30:00");
+  });
+  it("shows 60:00 for the 31–60 range", () => {
+    expect(RANGE_TIMER_TEXT.from31To60).toBe("60:00");
+  });
+  it("shows 90:00 for the 61–90 range", () => {
+    expect(RANGE_TIMER_TEXT.from61To90).toBe("90:00");
   });
 });
 

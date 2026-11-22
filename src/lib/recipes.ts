@@ -27,6 +27,13 @@ export const TIME_RANGES: { id: TimeRangeId; title: string; min: number; max: nu
 
 const DEFAULT_NOTE = "לא מצאנו מספיק מנות שמתאימות לזמן הזה רק עם המצרכים שהזנת.";
 
+/** Digits shown on the kitchen-timer illustration that heads each time range. */
+export const RANGE_TIMER_TEXT: Record<TimeRangeId, string> = {
+  upTo30: "30:00",
+  from31To60: "60:00",
+  from61To90: "90:00",
+};
+
 /** Splits the free-text field by commas (Latin or Arabic) and line breaks, trimming and de-duplicating. */
 export function parseIngredients(text: string): string[] {
   const seen = new Set<string>();

@@ -5,7 +5,7 @@ import { AlertCircle, ChefHat, Clock, Loader2, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { parseIngredients, type RecipeGroup, type TimeRangeId } from "@/lib/recipes";
+import { parseIngredients, RANGE_TIMER_TEXT, type RecipeGroup, type TimeRangeId } from "@/lib/recipes";
 import { suggestRecipes } from "@/lib/recipes.functions";
 
 export const Route = createFileRoute("/")({
@@ -28,10 +28,10 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const RANGE_STYLE: Record<TimeRangeId, { badge: string; dot: string }> = {
-  upTo30: { badge: "bg-herb-soft text-accent-foreground", dot: "bg-primary" },
-  from31To60: { badge: "bg-saffron-soft text-foreground", dot: "bg-saffron" },
-  from61To90: { badge: "bg-tomato-soft text-foreground", dot: "bg-tomato" },
+const RANGE_STYLE: Record<TimeRangeId, { badge: string; glow: string }> = {
+  upTo30: { badge: "bg-herb-soft text-accent-foreground", glow: "text-primary" },
+  from31To60: { badge: "bg-saffron-soft text-foreground", glow: "text-saffron" },
+  from61To90: { badge: "bg-tomato-soft text-foreground", glow: "text-tomato" },
 };
 
 function Index() {
@@ -164,13 +164,33 @@ function Index() {
   );
 }
 
+/** Static digital kitchen-timer illustration that heads a time range. */
+function TimerDisplay({ rangeId, label }: { rangeId: TimeRangeId; label: string }) {
+  const style = RANGE_STYLE[rangeId];
+  return (
+    <div
+      role="img"
+      aria-label={label}
+      className="inline-flex items-center gap-2 rounded-2xl border-2 border-foreground/15 bg-foreground px-4 py-2 shadow-card"
+    >
+      <Clock className="size-5 text-background/70" aria-hidden />
+      <span
+        aria-hidden
+        dir="ltr"
+        className={`font-mono text-2xl font-bold tabular-nums tracking-widest sm:text-3xl ${style.glow}`}
+      >
+        {RANGE_TIMER_TEXT[rangeId]}
+      </span>
+    </div>
+  );
+}
+
 function TimeGroup({ group }: { group: RecipeGroup }) {
   const style = RANGE_STYLE[group.id];
   return (
     <div className="fade-up">
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <span className={`size-3 rounded-full ${style.dot}`} aria-hidden />
-        <h2 className="font-display text-2xl text-foreground">{group.title}</h2>
+        <TimerDisplay rangeId={group.id} label={group.title} />
         <span className="text-sm text-muted-foreground">
           {group.recipes.length === 0 ? "אין הצעות" : `${group.recipes.length} הצעות`}
         </span>
