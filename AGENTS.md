@@ -28,3 +28,8 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+
+- Recipe rules (time ranges, per-range cap, ingredient whitelist, de-duplication) live in pure `src/lib/recipes.ts` and are applied server-side after the AI call — why: the model's output can't be trusted to follow them, and the pure module keeps them testable.
+- AI calls go through `src/lib/recipes.functions.ts` (server function, `@lovable.dev/ai-gateway`, strict JSON schema) and return a typed `{ ok, error }` result instead of throwing — why: the page shows a Hebrew retry message without losing input.
